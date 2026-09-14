@@ -86,7 +86,8 @@ class VoiceRecognitionUtil {
       final normalizedQuery = normalizedParts.join('&');
 
       // 4. 构造待签名字符串: GET&%2F&<encodedQuery>
-      final stringToSign = 'GET&${Uri.encodeComponent('/')}&${Uri.encodeComponent(normalizedQuery)}';
+      final stringToSign =
+          'GET&${Uri.encodeComponent('/')}&${Uri.encodeComponent(normalizedQuery)}';
 
       // 5. HMAC-SHA1 签名（key 需要加 &）
       final hmacKey = utf8.encode('$_accessKeySecret&');
