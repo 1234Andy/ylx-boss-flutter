@@ -29,6 +29,20 @@ jobs:
       - name: 安装依赖
         run: flutter pub get
 
+      - name: 生成语音识别密钥文件（从仓库 Secrets 读取）
+        # voice_secret.dart 含密钥未提交到仓库，此处从 Secrets 生成；
+        # 若未配置对应 Secrets 则生成空值（编译通过，但语音功能不可用）
+        run: |
+          mkdir -p lib/util
+          {
+            echo "/// 本文件由 CI 自动生成，请勿提交";
+            echo "class VoiceSecret {";
+            echo "  static const String appKey = '${{ secrets.VOICE_APP_KEY }}';";
+            echo "  static const String accessKeyId = '${{ secrets.VOICE_ACCESS_KEY_ID }}';";
+            echo "  static const String accessKeySecret = '${{ secrets.VOICE_ACCESS_KEY_SECRET }}';";
+            echo "}";
+          } > lib/util/voice_secret.dart
+
       - name: 构建 iOS Release（不签名，无需证书）
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | sed 's/+/./')
