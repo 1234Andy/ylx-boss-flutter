@@ -3,13 +3,20 @@
 # Windows 下载 artifact 后用 Sideloadly + Apple ID 签名安装到 iPhone 测试
 #
 # 触发方式:
-#   1. 手动: GitHub 仓库页 -> Actions -> "Build iOS IPA" -> Run workflow
-#   2. 自动: 推送 v 开头的版本 tag（如 git tag v1.0.1.108 && git push --tags）
+#   1. 手动: Actions -> "Build iOS IPA" -> Run workflow，顶部 "Use workflow from" 选择要打包的分支
+#   2. 自动: 推送 v 开头的版本 tag（如 git tag v1.0.1.116 && git push origin v1.0.1.116）
+#
+# 产物命名: artifact 为 ios-ipa_<分支>_<commit前7位>，多分支构建可区分
 
 name: Build iOS IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      build_number:
+        description: "CFBundleVersion（留空则按 UTC 时间戳自动生成）"
+        required: false
+        default: ""
   push:
     tags: ["v*"]
 
@@ -20,11 +27,32 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v5
 
+      - name: 记录构建标识
+        run: |
+          echo "BRANCH_SAFE=${GITHUB_REF_NAME//\//-}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
       - name: 安装 Flutter（与本地版本一致）
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.0"
           cache: true
+
+      - name: 生成语音识别密钥文件（从 Secrets 读取，未配置则为空）
+        env:
+          VOICE_APP_KEY: ${{ secrets.VOICE_APP_KEY }}
+          VOICE_ACCESS_KEY_ID: ${{ secrets.VOICE_ACCESS_KEY_ID }}
+          VOICE_ACCESS_KEY_SECRET: ${{ secrets.VOICE_ACCESS_KEY_SECRET }}
+        run: |
+          mkdir -p lib/util
+          cat > lib/util/voice_secret.dart <<EOF
+          /// 本文件由 CI 自动生成，请勿提交
+          class VoiceSecret {
+            static const String appKey = '${VOICE_APP_KEY}';
+            static const String accessKeyId = '${VOICE_ACCESS_KEY_ID}';
+            static const String accessKeySecret = '${VOICE_ACCESS_KEY_SECRET}';
+          }
+          EOF
 
       - name: 安装依赖
         run: flutter pub get
@@ -32,19 +60,26 @@ jobs:
       - name: 构建 iOS Release（不签名，无需证书）
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | sed 's/+/./')
-          flutter build ios --release --no-codesign --verbose --dart-define=FULL_VERSION=$VERSION
+          BUILD_NO="${{ inputs.build_number }}"
+          if [ -z "$BUILD_NO" ]; then
+            BUILD_NO=$(date -u +%Y%m%d%H%M)
+          fi
+          echo "分支: ${GITHUB_REF_NAME}  commit: ${SHORT_SHA}  版本: ${VERSION}  build: ${BUILD_NO}"
+          flutter build ios --release --no-codesign --verbose \
+            --build-number="$BUILD_NO" \
+            --dart-define=FULL_VERSION=$VERSION
 
       - name: 封装为 IPA
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | sed 's/+/./')
           mkdir -p Payload
           cp -r build/ios/iphoneos/Runner.app Payload/
-          zip -qr "ylx_boss_flutter_${VERSION}.ipa" Payload
+          zip -qr "ylx_boss_flutter_${VERSION}_${BRANCH_SAFE}.ipa" Payload
           ls -lh *.ipa
 
       - name: 上传构建产物（保留30天）
         uses: actions/upload-artifact@v4
         with:
-          name: ylx_boss_flutter-ios
+          name: ios-ipa_${{ env.BRANCH_SAFE }}_${{ env.SHORT_SHA }}
           path: ylx_boss_flutter_*.ipa
           retention-days: 30

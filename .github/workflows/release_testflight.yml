@@ -12,13 +12,19 @@
 # 说明：
 #   - 签名证书与描述文件由 fastlane match 自动创建，加密存储在私有仓库 CERT_REPO
 #   - 首次运行会自动创建 Apple Distribution 证书 + App Store 描述文件
-#   - 构建号使用 GitHub 运行序号，避免重复上传同版本号被 App Store Connect 拒绝
+#   - 构建号默认用 UTC 时间戳（YYYYMMDDHHMM），必然大于线上已有 build 号；也可在 Run workflow 时手动传入
+#   - 建议在 Settings -> Environments 创建 appstore 环境并配置 Required reviewers，实现发布审批门禁
 #   - 需要先在 App Store Connect 创建好 App 记录（Bundle ID: com.lingxi.boss）
 
 name: Release to TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      build_number:
+        description: "CFBundleVersion（留空则按 UTC 时间戳生成，必须大于线上已有 build 号）"
+        required: false
+        default: ""
 
 env:
   CERT_REPO: git@github.com:yigezzd/ylx-ios-certs.git
@@ -28,18 +34,46 @@ env:
   ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
   TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+# 同一时间只允许一个发布任务，避免证书与上传互相覆盖
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: macos-latest
+    # 需在 Settings -> Environments 创建 appstore 环境并配置 Required reviewers，才具备发布审批门禁
+    environment: appstore
     steps:
       - name: 检出代码
         uses: actions/checkout@v5
+
+      - name: 记录构建标识
+        run: |
+          echo "BRANCH_SAFE=${GITHUB_REF_NAME//\//-}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
       - name: 安装 Flutter（与本地版本一致）
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.44.0"
           cache: true
+
+      - name: 生成语音识别密钥文件（从 Secrets 读取，未配置则为空）
+        env:
+          VOICE_APP_KEY: ${{ secrets.VOICE_APP_KEY }}
+          VOICE_ACCESS_KEY_ID: ${{ secrets.VOICE_ACCESS_KEY_ID }}
+          VOICE_ACCESS_KEY_SECRET: ${{ secrets.VOICE_ACCESS_KEY_SECRET }}
+        run: |
+          mkdir -p lib/util
+          cat > lib/util/voice_secret.dart <<EOF
+          /// 本文件由 CI 自动生成，请勿提交
+          class VoiceSecret {
+            static const String appKey = '${VOICE_APP_KEY}';
+            static const String accessKeyId = '${VOICE_ACCESS_KEY_ID}';
+            static const String accessKeySecret = '${VOICE_ACCESS_KEY_SECRET}';
+          }
+          EOF
 
       - name: 安装依赖
         run: flutter pub get
@@ -111,8 +145,13 @@ jobs:
       - name: 构建发行 IPA
         run: |
           VERSION=$(grep '^version:' pubspec.yaml | awk '{print $2}' | sed 's/+/./')
+          BUILD_NO="${{ inputs.build_number }}"
+          if [ -z "$BUILD_NO" ]; then
+            BUILD_NO=$(date -u +%Y%m%d%H%M)
+          fi
+          echo "分支: ${GITHUB_REF_NAME}  commit: ${SHORT_SHA}  版本: ${VERSION}  build: ${BUILD_NO}"
           flutter build ipa --release \
-            --build-number=${{ github.run_number }} \
+            --build-number="$BUILD_NO" \
             --dart-define=FULL_VERSION=$VERSION
 
       - name: 上传到 TestFlight
@@ -125,6 +164,6 @@ jobs:
       - name: 备份 IPA 产物
         uses: actions/upload-artifact@v4
         with:
-          name: ylx-boss-release-ipa
+          name: appstore-ipa_${{ env.BRANCH_SAFE }}_${{ env.SHORT_SHA }}
           path: build/ios/ipa/*.ipa
           retention-days: 30
