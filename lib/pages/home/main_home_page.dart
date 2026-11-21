@@ -9,6 +9,7 @@ import 'package:flutter_deer/pages/home/widgets/payment_card.dart';
 import 'package:flutter_deer/pages/home/widgets/sale_rank_card.dart';
 import 'package:flutter_deer/pages/home/widgets/secondary_data_card.dart';
 import 'package:flutter_deer/pages/home/widgets/stock_notice_bar.dart';
+import 'package:flutter_deer/pages/home/widgets/store_analysis_card.dart';
 import 'package:flutter_deer/pages/home/widgets/trend_card.dart';
 import 'package:flutter_deer/res/constant.dart';
 import 'package:flutter_deer/routers/routers.dart';
@@ -52,6 +53,7 @@ class _MainHomePageState extends State<MainHomePage> {
         <String, dynamic>{'fieldid': 'fkfs', 'show': 1, 'isort': 3, 'fieldname': '付款方式'},
         <String, dynamic>{'fieldid': 'qs', 'show': 1, 'isort': 4, 'fieldname': '营业额/客流量趋势'},
         <String, dynamic>{'fieldid': 'xsb', 'show': 1, 'isort': 5, 'fieldname': '分类/单品销售榜'},
+        <String, dynamic>{'fieldid': 'mdfx', 'show': 1, 'isort': 6, 'fieldname': '门店分析'},
       ];
   // 经营概览
   Map<String, dynamic> _overview = {};
@@ -70,6 +72,8 @@ class _MainHomePageState extends State<MainHomePage> {
   List<Map<String, dynamic>> _saleRankList = [];
   String _saleRankType = 'SaleType'; // SaleType=分类销售榜 SaleProd=单品销售榜
   int _saleRankSort = 0; // 0=按销售金额 1=按销售数量
+  // 门店分析（含合计行，对齐 Vue storeAnalysis.vue）
+  List<Map<String, dynamic>> _storeAnalysisRows = [];
 
   // 时间维度 daytype 映射
   static const List<_TimeTab> _timeTabs = [
@@ -167,14 +171,39 @@ class _MainHomePageState extends State<MainHomePage> {
       final storeStr = SpUtil.getString(Constant.store) ?? '';
       if (storeStr.isNotEmpty) {
         final store = jsonDecode(storeStr) as Map<String, dynamic>;
+        final storeId = store['id']?.toString() ?? '';
+        final spId = store['spid']?.toString() ?? '';
+        // 总部（总店）默认查全部门店；bosshomespidflag 有值时以其为准（1=全部，否则总部自己）
+        final bool isBoss = storeId.isNotEmpty && storeId == spId;
+        final String? bossFlag = isBoss ? _bossHomeSpidFlag() : null;
+        final bool viewAllStores = isBoss && (bossFlag == null || bossFlag == '1');
         setState(() {
-          _storeName = store['name']?.toString() ?? '欢迎使用';
-          _storeId = store['id']?.toString() ?? '';
-          _spId = store['spid']?.toString() ?? '';
-          _activeStoreId = _storeId;
+          _spId = spId;
+          if (viewAllStores) {
+            _storeId = '';
+            _activeStoreId = '';
+            _storeName = '全部机构';
+          } else {
+            _storeId = storeId;
+            _activeStoreId = storeId;
+            _storeName = store['name']?.toString() ?? '欢迎使用';
+          }
         });
       }
     } catch (_) {}
+  }
+
+  /// 读取 loginParamResp.bosshomespidflag，未配置或空值返回 null
+  static String? _bossHomeSpidFlag() {
+    try {
+      final cfgStr = SpUtil.getString(Constant.loginParamResp) ?? '';
+      if (cfgStr.isEmpty) return null;
+      final cfg = jsonDecode(cfgStr) as Map<String, dynamic>;
+      final flag = cfg['bosshomespidflag']?.toString() ?? '';
+      return flag.isEmpty ? null : flag;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// 切换机构（对齐采购入库 _selectStore）
@@ -188,9 +217,10 @@ class _MainHomePageState extends State<MainHomePage> {
     if (result != null && mounted) {
       setState(() {
         final storeId = result['storeid']?.toString() ?? '';
+        final storeName = result['storename']?.toString() ?? '';
         _activeStoreId = storeId;
         _storeId = storeId;
-        _storeName = result['storename']?.toString() ?? '全部机构';
+        _storeName = storeName.isEmpty ? '全部机构' : storeName;
         _spId = result['spid']?.toString() ?? '';
       });
       _fetchAllData();
@@ -222,6 +252,13 @@ class _MainHomePageState extends State<MainHomePage> {
       'sids': _storeId.isEmpty || _storeId == '0' ? <String>[] : <String>[_storeId],
       'spid': _spId,
     };
+    // 门店分析：时间由首页时间维度换算；对齐 Vue，批发维度不请求也不展示
+    final storeAnalysisParams = <String, dynamic>{
+      'sids': _storeId.isEmpty || _storeId == '0' ? <String>[] : <String>[_storeId],
+      'isorttype': 0,
+      'is_page': 0,
+      ..._storeAnalysisTimeRange(_timeTabs[_timeIdx].daytype),
+    };
     Future.wait([
       request(HttpApi.homeGetHomeCard, homeCardParams),
       request(isPf ? HttpApi.homeGetPFBusinessOverview : HttpApi.homeGetBusinessOverview, params),
@@ -229,6 +266,7 @@ class _MainHomePageState extends State<MainHomePage> {
       request(
           isPf ? HttpApi.homeGetPFBusinessStatistics : HttpApi.homeGetBusinessStatistics, params),
       request(saleRankApi, rankParams),
+      if (!isPf) request(HttpApi.summaryStoreStoreSale, storeAnalysisParams),
     ]).then((results) {
       if (!mounted) return;
       setState(() {
@@ -239,12 +277,23 @@ class _MainHomePageState extends State<MainHomePage> {
         List<Map<String, dynamic>> details;
         if (cardData is List && cardData.isNotEmpty && cardData[0] is Map<String, dynamic>) {
           _rawHomeCardData = cardData;
-          details =
-              (cardData[0]['getHomeCardDetailList'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+          details = (cardData[0]['getHomeCardDetailList'] as List?)
+                  ?.map((e) => Map<String, dynamic>.from(e as Map))
+                  .toList() ??
+              <Map<String, dynamic>>[];
         } else {
           // API 无数据时使用默认配置
           _rawHomeCardData = null;
           details = List<Map<String, dynamic>>.from(_defaultCardList);
+        }
+        // 对齐 Vue：后端未下发“门店分析”时本地补齐（便于卡片设置页开关/排序，保存时回传）
+        if (!details.any((e) => e['fieldid'] == 'mdfx')) {
+          details.add(<String, dynamic>{
+            'fieldid': 'mdfx',
+            'fieldname': '门店分析',
+            'show': 1,
+            'isort': 99,
+          });
         }
         _cardFullList
           ..clear()
@@ -276,6 +325,10 @@ class _MainHomePageState extends State<MainHomePage> {
         if (rankData is List) {
           _saleRankList = rankData.whereType<Map<String, dynamic>>().toList();
         }
+        // 门店分析（含合计行；批发维度不展示）
+        _storeAnalysisRows = isPf
+            ? <Map<String, dynamic>>[]
+            : _buildStoreAnalysisRows(results.length > 5 ? results[5]['data'] : null);
       });
     });
   }
@@ -413,6 +466,109 @@ class _MainHomePageState extends State<MainHomePage> {
     return const Color(0xFF9CA3AF);
   }
 
+  // ─────────────────────────────────────────────────────────
+  // 门店分析（对齐 Vue pages/index/child/storeAnalysis.vue）
+  // ─────────────────────────────────────────────────────────
+
+  static String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  static double _round2(dynamic value) {
+    final double d = double.tryParse(value?.toString() ?? '') ?? 0;
+    return double.parse(d.toStringAsFixed(2));
+  }
+
+  /// 首页时间维度(daytype: 1今日/2昨日/3本周/4本月/5上月)换算为接口时间区间
+  static Map<String, String> _storeAnalysisTimeRange(String daytype) {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    DateTime start = today;
+    DateTime end = today;
+    switch (daytype) {
+      case '2': // 昨日
+        start = end = today.subtract(const Duration(days: 1));
+        break;
+      case '3': // 本周（周一~今日）
+        start = today.subtract(Duration(days: today.weekday - 1));
+        break;
+      case '4': // 本月（1号~今日）
+        start = DateTime(today.year, today.month);
+        break;
+      case '5': // 上月
+        start = DateTime(today.year, today.month - 1);
+        end = DateTime(today.year, today.month).subtract(const Duration(days: 1));
+        break;
+      default: // 今日
+        break;
+    }
+    return <String, String>{
+      'starttime': '${_dateStr(start)} 00:00:00',
+      'endtime': '${_dateStr(end)} 23:59:59',
+    };
+  }
+
+  /// 构建门店分析表格行（含合计行）
+  static List<Map<String, dynamic>> _buildStoreAnalysisRows(dynamic data) {
+    List<Map<String, dynamic>> list = <Map<String, dynamic>>[];
+    Map<String, dynamic> sumdata = <String, dynamic>{};
+    if (data is Map) {
+      final dynamic rawList = data['list'];
+      if (rawList is List) {
+        list = rawList.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      final dynamic rawSum = data['sumdata'];
+      if (rawSum is Map) {
+        sumdata = Map<String, dynamic>.from(rawSum);
+      }
+    } else if (data is List) {
+      list = data.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+    }
+
+    double totalSale = double.tryParse(sumdata['saleamt']?.toString() ?? '') ?? 0;
+    if (totalSale == 0) {
+      totalSale = list.fold<double>(
+          0, (sum, item) => sum + (double.tryParse(item['saleamt']?.toString() ?? '') ?? 0));
+    }
+
+    final List<Map<String, dynamic>> rows = list.map((item) {
+      final double saleamt = double.tryParse(item['saleamt']?.toString() ?? '') ?? 0;
+      final double grossamt = double.tryParse(item['grossamt']?.toString() ?? '') ?? 0;
+      final double grossrate = saleamt != 0 ? _round2(grossamt / saleamt * 100) : 0;
+      final String ratio =
+          totalSale != 0 ? _round2(saleamt / totalSale * 100).toStringAsFixed(2) : '0.00';
+      return <String, dynamic>{
+        'storename': item['storename']?.toString() ?? '',
+        'saleamt': _round2(saleamt).toStringAsFixed(2),
+        'grossamt': _round2(grossamt).toStringAsFixed(2),
+        'grossrate': grossrate.toStringAsFixed(2),
+        'ratio': ratio,
+      };
+    }).toList();
+
+    // 合计行：直接取接口返回的 sumdata（不在前端自行汇总），销售占比不展示
+    if (rows.isNotEmpty) {
+      String pick(List<String> keys) {
+        for (final String key in keys) {
+          final dynamic value = sumdata[key];
+          if (value != null && value.toString().isNotEmpty) {
+            return value.toString();
+          }
+        }
+        return '';
+      }
+
+      String fmt(String value) => value.isEmpty ? '' : _round2(value).toStringAsFixed(2);
+      rows.add(<String, dynamic>{
+        'storename': '合计',
+        'saleamt': fmt(pick(['saleamt'])),
+        'grossamt': fmt(pick(['grossamt'])),
+        'grossrate': fmt(pick(['grossrate'])),
+        'ratio': '',
+      });
+    }
+    return rows;
+  }
+
   String get _dayTypeName {
     const map = {'1': '日', '2': '日', '3': '周', '4': '月', '5': '月'};
     return map[_timeTabs[_timeIdx].daytype] ?? '日';
@@ -476,7 +632,10 @@ class _MainHomePageState extends State<MainHomePage> {
                       ],
                       // 其余卡片按 _cardList 顺序动态渲染（对齐 Vue v-for cardList）
                       for (final card in _cardList)
-                        if (card['fieldid'] != 'yysj' && card['fieldid'] != 'yjxx') ...[
+                        if (card['fieldid'] != 'yysj' &&
+                            card['fieldid'] != 'yjxx' &&
+                            // 对齐 Vue：批发维度不展示门店分析
+                            !(card['fieldid'] == 'mdfx' && _dataBtn == 1)) ...[
                           const SizedBox(height: 12),
                           _buildCardWidget(card),
                         ],
@@ -583,6 +742,16 @@ class _MainHomePageState extends State<MainHomePage> {
           onCardHide: () => _cardHide('xsb'),
           onCardManage: _openCardSetting,
         );
+        break;
+      case 'mdfx':
+        child = _dataBtn == 1
+            ? const SizedBox.shrink()
+            : StoreAnalysisCard(
+                rows: _storeAnalysisRows,
+                onCardPin: () => _cardPin('mdfx'),
+                onCardHide: () => _cardHide('mdfx'),
+                onCardManage: _openCardSetting,
+              );
         break;
       default:
         child = const SizedBox.shrink();
