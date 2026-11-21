@@ -92,12 +92,3 @@ lib/generated_plugin_registrant.dart
 # Qoder 生成内容（知识库索引与内置代理副本，无需纳入版本管理）
 .qoder/repowiki/
 .qoder/agents/
-
-# 本地工具安装包（SVN 客户端，体积大且无需随代码分发）
-_sliksvn.zip
-
-# qr_code_scanner 插件自带的嵌套 git 仓库（已改名为 .git_disabled，不作为源码提交）
-packages/qr_code_scanner/.git_disabled/
-
-# 阿里云 NLS 语音识别密钥（本地私有，含真实 AccessKey，仅提交 example 占位文件）
-lib/util/voice_secret.dart

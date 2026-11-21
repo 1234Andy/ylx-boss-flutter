@@ -377,7 +377,7 @@ class _CgthsqAddPageState extends State<CgthsqAddPage> {
             'fileLists': _fileLists,
           };
     params['billqty'] = totalQty;
-    params['billamt'] = MathUtils.formatDecimalNum(3, totalAmt);
+    params['billamt'] = MathUtils.roundTo(totalAmt);
     params['detaillist'] = detaillist;
     params['fileLists'] = _fileLists;
     params['remark'] = _remarkController.text.trim();
@@ -1621,11 +1621,6 @@ class _CgthsqAddPageState extends State<CgthsqAddPage> {
         return;
       }
       final prod = primary ?? list.first as Map<String, dynamic>;
-      // 采购单据限制扫描录入规格商品（对齐 PC 端）：规格需人工选定，扫码无法确定具体规格
-      if (prod['specflag']?.toString() == '1') {
-        Toast.show('规格商品不支持扫描录入');
-        return;
-      }
       final prodid = prod['prodid']?.toString() ?? prod['productid']?.toString() ?? '';
       final barcode = prod['barcode']?.toString() ?? prod['selfbarcode']?.toString() ?? '';
       // 复合去重键对齐后台 ROW_KEYS：productid + unitonlyid + sizeonlyid，同一商品不同包装/规格视为不同行

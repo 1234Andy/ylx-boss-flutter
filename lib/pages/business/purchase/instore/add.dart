@@ -944,7 +944,7 @@ class _PurchaseInstoreAddPageState extends State<PurchaseInstoreAddPage> {
 
     params['billtype'] = _billtype;
     params['billqty'] = totalQty;
-    params['billamt'] = MathUtils.formatDecimalNum(3, totalAmt);
+    params['billamt'] = MathUtils.roundTo(totalAmt);
     params['detaillist'] = detaillist;
     params['fileLists'] = _fileLists;
     params['remark'] = _remarkController.text.trim();
@@ -2839,11 +2839,6 @@ class _PurchaseInstoreAddPageState extends State<PurchaseInstoreAddPage> {
           return;
         }
         final prod = primary ?? list.first as Map<String, dynamic>;
-        // 采购单据限制扫描录入规格商品（对齐 PC 端）：规格需人工选定，扫码无法确定具体规格
-        if (prod['specflag']?.toString() == '1') {
-          Toast.show('规格商品不支持扫描录入');
-          return;
-        }
         final String prodid = prod['prodid']?.toString() ?? prod['productid']?.toString() ?? '';
         final String barcode = prod['barcode']?.toString() ?? prod['selfbarcode']?.toString() ?? '';
         // 复合去重键对齐后台 ROW_KEYS：productid + unitonlyid + sizeonlyid
@@ -3054,11 +3049,6 @@ class _PurchaseInstoreAddPageState extends State<PurchaseInstoreAddPage> {
       final list = (data is Map<String, dynamic> ? data['list'] : null) as List? ?? [];
       if (list.isNotEmpty) {
         final prod = list.first as Map<String, dynamic>;
-        // 采购单据限制扫描录入规格商品（对齐 PC 端）：规格需人工选定，扫码无法确定具体规格
-        if (prod['specflag']?.toString() == '1') {
-          Toast.show('规格商品不支持扫描录入');
-          return;
-        }
         setState(() {
           row.nameController.text =
               prod['productname']?.toString() ?? prod['name']?.toString() ?? '';

@@ -47,19 +47,8 @@ class _CardSettingPageState extends State<CardSettingPage> {
       final data = res['data'];
       if (data is List && data.isNotEmpty && data[0] is Map<String, dynamic>) {
         _rawHomeCardData = data;
-        final details = (data[0]['getHomeCardDetailList'] as List?)
-                ?.map((e) => Map<String, dynamic>.from(e as Map))
-                .toList() ??
-            <Map<String, dynamic>>[];
-        // 对齐 Vue：后端未下发“门店分析”时本地补齐（与首页保持一致，可开关/排序）
-        if (!details.any((e) => e['fieldid'] == 'mdfx')) {
-          details.add(<String, dynamic>{
-            'fieldid': 'mdfx',
-            'fieldname': '门店分析',
-            'show': 1,
-            'isort': 99,
-          });
-        }
+        final details =
+            (data[0]['getHomeCardDetailList'] as List?)?.cast<Map<String, dynamic>>() ?? [];
         // 过滤掉营业数据和预警信息（常驻顶部，不可管理）
         _topList = details.where((e) => e['fieldid'] == 'yysj' || e['fieldid'] == 'yjxx').toList();
         _cardList = details.where((e) => e['fieldid'] != 'yysj' && e['fieldid'] != 'yjxx').toList()
@@ -110,7 +99,6 @@ class _CardSettingPageState extends State<CardSettingPage> {
     {'fieldname': '付款方式', 'fieldid': 'fkfs', 'show': 1, 'isort': 3},
     {'fieldname': '营业额/客流量趋势', 'fieldid': 'qs', 'show': 1, 'isort': 4},
     {'fieldname': '分类/单品销售榜', 'fieldid': 'xsb', 'show': 1, 'isort': 5},
-    {'fieldname': '门店分析', 'fieldid': 'mdfx', 'show': 1, 'isort': 6},
   ];
 
   void _handleReset() {

@@ -960,7 +960,7 @@ class _PurchaseCgthAddPageState extends State<PurchaseCgthAddPage>
     }
 
     params['billqty'] = totalQty;
-    params['billamt'] = MathUtils.formatDecimalNum(3, totalAmt);
+    params['billamt'] = MathUtils.roundTo(totalAmt);
     params['billsellamt'] = MathUtils.roundTo(totalSellAmt);
     params['detaillist'] = detaillist;
     params['fileLists'] = _fileLists;

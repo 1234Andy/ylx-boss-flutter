@@ -564,7 +564,7 @@ class _PurchaseCgorderAddPageState extends State<PurchaseCgorderAddPage>
     }
 
     params['billqty'] = totalQty;
-    params['billamt'] = MathUtils.formatDecimalNum(3, totalAmt);
+    params['billamt'] = MathUtils.roundTo(totalAmt);
     params['detaillist'] = detaillist;
     params['remark'] = _remarkController.text.trim();
     params['supname'] = _supController.text.trim();
@@ -913,7 +913,7 @@ class _PurchaseCgorderAddPageState extends State<PurchaseCgorderAddPage>
       'fileLists': _fileLists,
     };
     params['billqty'] = totalQty;
-    params['billamt'] = MathUtils.formatDecimalNum(3, totalAmt);
+    params['billamt'] = MathUtils.roundTo(totalAmt);
     params['detaillist'] = detaillist;
     params['remark'] = _remarkController.text.trim();
     params['supname'] = _supController.text.trim();
@@ -1216,11 +1216,6 @@ class _PurchaseCgorderAddPageState extends State<PurchaseCgorderAddPage>
           return;
         }
         final prod = primary ?? list.first as Map<String, dynamic>;
-        // 采购单据限制扫描录入规格商品（对齐 PC 端）：规格需人工选定，扫码无法确定具体规格
-        if (prod['specflag']?.toString() == '1') {
-          Toast.show('规格商品不支持扫描录入');
-          return;
-        }
         final String prodid = prod['prodid']?.toString() ?? prod['productid']?.toString() ?? '';
         // 复合去重键对齐后台 ROW_KEYS：productid + unitonlyid + sizeonlyid
         final String unitonlyid = prod['unitonlyid']?.toString() ?? '';
