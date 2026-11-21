@@ -1,0 +1,61 @@
+schema_version: 1
+module_path: root
+title: Flutter 灵犀管店项目根配置与构建脚本
+scope:
+    - README.md
+    - README-EN.md
+    - pubspec.yaml
+    - pubspec.lock
+    - analysis_options.yaml
+    - devtools_options.yaml
+    - .gitignore
+    - build_apk.ps1
+    - build_ipa.ps1
+    - download_flutter.ps1
+    - get_short_path.ps1
+    - codemagic.yaml
+source_files: []
+depends_on: []
+related_to: []
+kk_module_id: 01597aa4-c66b-4523-ae56-a76ffe97e028
+kk_cards:
+    architecture_design:
+        id: caf05b0e-071d-43ad-90f9-a17adf692814
+        title: Flutter 灵犀管店项目根配置与构建脚本
+    coding_conventions:
+        id: 00c3bd2e-f297-4be7-bf4d-72af1aee99ba
+        title: Flutter 灵犀管店项目根配置与构建脚本
+    overview:
+        id: e3e76989-7647-447f-ad9d-d68f1b9c3366
+        title: Flutter 灵犀管店项目根配置与构建脚本
+    tech_stack:
+        id: 38ab76d8-1a06-4e23-9998-6032e9688c4d
+        title: Flutter 灵犀管店项目根配置与构建脚本
+    unique_setup_and_commands:
+        id: ccd9dbff-8cfe-4dbd-a682-66fb3b3fcec9
+        title: Flutter 灵犀管店项目根配置与构建脚本
+    build_system:
+        id: 78c1ede7-4a86-4a25-a55a-f98c512ca902
+        title: Flutter 灵犀管店构建系统：Codemagic + PowerShell 脚本
+    configuration_system:
+        id: 20adaad6-31ea-4ce3-b2b6-56de180c68c3
+        title: 灵犀管店 Flutter 应用配置系统：常量集中、sp_util 持久化与编译期环境切换
+    dependency_management:
+        id: ed1cd444-91b1-4f8c-ac3a-1d5479dbdbdd
+        title: Flutter 项目依赖管理（pub、CocoaPods、Gradle 与本地 vendored 包）
+    error_handling:
+        id: aacde9ea-8daa-404c-8705-e2dc233680a6
+        title: 灵犀管店 Flutter 应用错误处理体系：网络异常映射与全局异常捕获
+    frontend_style:
+        id: 41cf0ae5-46fb-4039-a70e-ceeb89c6ca74
+        title: Flutter 灵犀管店前端样式体系：本地 Design Tokens + Material ThemeData 主题
+    logging_system:
+        id: f76dd53e-679c-48ad-bfb4-e4803e216016
+        title: 灵犀管店日志系统：控制台结构化输出 + 本地文件落盘 + FTP 远程上传
+kk_repo_cards:
+    - build_system
+    - configuration_system
+    - dependency_management
+    - error_handling
+    - frontend_style
+    - logging_system

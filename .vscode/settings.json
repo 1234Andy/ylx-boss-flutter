@@ -1,0 +1,84 @@
+{
+    // ── Flutter / Dart 基础配置 ──
+    "dart.flutterSdkPath": "E:\\.flutter",
+    "dart.lineLength": 100,
+    "dart.enableSdkFormatter": true,
+
+    // ── 编辑器通用配置 ──
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.formatOnPaste": false,
+    "editor.tabSize": 2,
+    "editor.guides.bracketPairs": "active",
+    "editor.suggestSelection": "first",
+    "editor.acceptSuggestionOnCommitCharacter": false,
+    "editor.quickSuggestions": {
+        "other": true,
+        "comments": true,
+        "strings": true
+    },
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit",
+        "source.organizeImports": "explicit"
+    },
+
+    // ── Dart 语言特定配置 ──
+    "[dart]": {
+        "editor.defaultFormatter": "Dart-Code.dart-code",
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true,
+        "editor.rulers": [100],
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.inlayHints.enabled": "off"
+    },
+
+    // ── 文件关联 ──
+    "files.associations": {
+        "*.arb": "json"
+    },
+
+    // ── 排除构建产物与生成文件，提升 IDE 性能 ──
+    "files.exclude": {
+        "**/.dart_tool": true,
+        "**/.flutter-plugins": true,
+        "**/.flutter-plugins-dependencies": true,
+        "**/.packages": true,
+        "**/build": true,
+        "**/.gradle": true,
+        "**/.kotlin": true
+    },
+    "files.watcherExclude": {
+        "**/.dart_tool/**": true,
+        "**/build/**": true,
+        "**/.gradle/**": true
+    },
+    "search.exclude": {
+        "**/.dart_tool": true,
+        "**/build": true,
+        "**/.gradle": true,
+        "**/pubspec.lock": true
+    },
+
+    // ── Git 配置 ──
+    "git.confirmSync": false,
+
+    // ── 其他 ──
+    "workbench.startupEditor": "newUntitledFile",
+    "marscode.chatLanguage": "cn",
+    "Codegeex.CompletionDelay": 1,
+
+    "editor.fontLigatures": false,
+    "editor.fontSize": 13,
+    "editor.lineHeight": 1.6,
+    "editor.mouseWheelZoom": true,
+    "window.zoomLevel": 1,
+
+    // ── 终端环境变量（确保 flutter 命令可用）──
+    "terminal.integrated.env.windows": {
+        "Path": "E:\\.flutter\\bin;${env:Path}",
+        "ANDROID_HOME": "D:\\Android\\android-sdk",
+        "JAVA_HOME": "D:\\jdk-17"
+    }
+}

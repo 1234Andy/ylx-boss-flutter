@@ -1,0 +1,27 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+commit: ca2b74e9b85ce0cf605b02c32d8fac3b1fc92ae7
+branch: main
+exported_at: "2026-10-27T04:39:31Z"
+modules:
+    root:
+        dir_name: Flutter 灵犀管店项目根配置与构建脚本
+        title: Flutter 灵犀管店项目根配置与构建脚本
+        scope:
+            - README.md
+            - README-EN.md
+            - pubspec.yaml
+            - pubspec.lock
+            - analysis_options.yaml
+            - devtools_options.yaml
+            - .gitignore
+            - build_apk.ps1
+            - build_ipa.ps1
+            - download_flutter.ps1
+            - get_short_path.ps1
+            - codemagic.yaml
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
